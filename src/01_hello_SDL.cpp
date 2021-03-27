@@ -11,7 +11,7 @@ const int QUAD_SIZE = 32;
 
 #define FRAME (1000 / 60)
 
-#define ONELINE
+// #define ONELINE
 
 struct Movement {
     int Left;
@@ -45,6 +45,9 @@ struct View {
     float speed_angle;
     int deltaTick;
 
+    struct Line* rays;
+    int ray_count;
+
     SDL_Renderer* renderer;
 
 };
@@ -58,8 +61,10 @@ void rotateLeftView(View *v);
 void rotateRightView(View *v);
 void forwardView(View *v);
 void backwardView(View *v);
+void rayCalculate(View *v);
 void drawView(View *v, SDL_Renderer* renderer);
 void drawMap(View* v, SDL_Renderer* renderer);
+void drawScene(View* v, SDL_Renderer* renderer);
 void sdl_ellipse(SDL_Renderer* r, int x0, int y0, int radiusX, int radiusY);
 
 
@@ -120,6 +125,11 @@ int main(int argc, char** argv)
         View v = createViewer();
         v.map = map;
         v.renderer = renderer;
+
+        // initialise le tableau des rayons
+        v.rays = (struct Line*)malloc(1 * sizeof(WIN_W));
+        v.ray_count = WIN_W;
+
         CenterToCellMap(&v);
         Movement m = Movement();
         m.Up = 0;
@@ -144,7 +154,12 @@ int main(int argc, char** argv)
                     SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
                     SDL_RenderClear(renderer);
 
+                    rayCalculate(&v);
+
+                    drawScene(&v, renderer);
+
                     drawMap(&v, renderer);
+
                     drawView(&v, renderer);
 
                     SDL_RenderPresent(renderer);
@@ -232,8 +247,10 @@ int main(int argc, char** argv)
 
             }
         }
+
         SDL_Delay(10);
 
+        free(v.rays);
 
     } else {
         fprintf(stderr,"Erreur de création de la fenêtre: %s\n",SDL_GetError());
@@ -275,10 +292,8 @@ View createViewer()
 
 }
 
-
-Line raycasting(float angle, View *v)
+Line raycastingHorizontal(float angle, View *v)
 {
-    int hit = 0;
 
     if(angle < 0){
         angle = (2 * M_PI) + angle;
@@ -296,7 +311,7 @@ Line raycasting(float angle, View *v)
     float ry, xy, rxo, ryo;
     int map_x, map_y;
     // distance of field
-    int dof = 0;
+    int hit = 0;
 
     float tierPi = M_PI + M_PI / 2;
     float troisTierPi = M_PI / 2;
@@ -304,26 +319,28 @@ Line raycasting(float angle, View *v)
     //if(angle < M_PI){
     if( angle > tierPi || angle < troisTierPi ){
 
-        ry = (v->x - (v->map_x * QUAD_SIZE)) * tanf( angle );
+        ry = (QUAD_SIZE - (v->x - (v->map_x * QUAD_SIZE))) * tanf( angle );
 
         ryo = QUAD_SIZE * tanf( angle );
         rxo = QUAD_SIZE;
 
         ray.y2 = v->y + ry;
-        ray.x2 = ((v->map_x + 1) * QUAD_SIZE);
+        ray.x2 = (((float)v->map_x + 1) * QUAD_SIZE);
 
+#if defined(ONELINE)
         sdl_ellipse(v->renderer, ray.x2, ray.y2, 5, 5);
+#endif // defined
 
         map_x = ray.x2 / QUAD_SIZE;
         map_y = ray.y2 / QUAD_SIZE;
 
-        map_y--;
+
     }
 
     //if(angle == M_PI || angle == 0.0){
     if( angle < tierPi && angle > troisTierPi ){
 
-        ry = (v->x - ((v->map_x + 1) * QUAD_SIZE)) * tanf( angle );
+        ry = - (v->x - ((v->map_x) * QUAD_SIZE)) * tanf( angle );
 
         ryo = -QUAD_SIZE * tanf( angle );
         rxo = -QUAD_SIZE;
@@ -331,20 +348,23 @@ Line raycasting(float angle, View *v)
         ray.y2 = v->y + ry;
         ray.x2 = ((v->map_x) * QUAD_SIZE);
 
+#if defined(ONELINE)
         sdl_ellipse(v->renderer, ray.x2, ray.y2, 5, 5);
+#endif // defined
 
         map_x = ray.x2 / QUAD_SIZE;
         map_y = ray.y2 / QUAD_SIZE;
+
+        map_x--;
 
     }
 
     if( angle == tierPi || angle == troisTierPi ){
         map_x = 0;
         map_y = 0;
-        dof = ARRAY_LEN;
+        hit = 1;
 
     }
-
 
     while (!hit){
 
@@ -359,9 +379,14 @@ Line raycasting(float angle, View *v)
                 ray.x2 += rxo;
                 ray.y2 += ryo;
 
+#if defined(ONELINE)
+                sdl_ellipse(v->renderer, ray.x2, ray.y2, 5, 5);
+#endif // defined
+
                 map_x = ray.x2 / QUAD_SIZE;
                 map_y = ray.y2 / QUAD_SIZE;
-                if( angle > tierPi || angle < troisTierPi ){
+
+                if( angle < tierPi && angle > troisTierPi ){
                     map_x--;
                 }
 
@@ -398,7 +423,7 @@ Line raycastingVertical(float angle, View *v)
     float rx, xy, rxo, ryo;
     int map_x, map_y;
     // distance of field
-    int dof = 0;
+    int hit = 0;
 
     if(angle > M_PI){
 
@@ -409,6 +434,10 @@ Line raycastingVertical(float angle, View *v)
 
         ray.x2 = v->x + rx;
         ray.y2 = ((v->map_y) * QUAD_SIZE);
+
+#if defined(ONELINE)
+        sdl_ellipse(v->renderer, ray.x2, ray.y2, 5, 5);
+#endif // defined
 
         map_x = ray.x2 / QUAD_SIZE;
         map_y = (ray.y2) / QUAD_SIZE;
@@ -430,6 +459,10 @@ Line raycastingVertical(float angle, View *v)
         ray.x2 = v->x + rx;
         ray.y2 = ((v->map_y + 1) * QUAD_SIZE);
 
+#if defined(ONELINE)
+        sdl_ellipse(v->renderer, ray.x2, ray.y2, 5, 5);
+#endif // defined
+
         map_x = ray.x2 / QUAD_SIZE;
         map_y = ray.y2 / QUAD_SIZE;
 
@@ -440,10 +473,8 @@ Line raycastingVertical(float angle, View *v)
     if(angle == M_PI || angle == 0.0){
         map_x = 0;
         map_y = 0;
-        dof = ARRAY_LEN;
+        hit = 1;
     }
-
-    int hit = 0;
 
     while (!hit){
 
@@ -457,6 +488,10 @@ Line raycastingVertical(float angle, View *v)
 
                 ray.x2 += rxo;
                 ray.y2 += ryo;
+
+#if defined(ONELINE)
+        sdl_ellipse(v->renderer, ray.x2, ray.y2, 5, 5);
+#endif // defined
 
                 map_x = ray.x2 / QUAD_SIZE;
                 map_y = ray.y2 / QUAD_SIZE;
@@ -476,6 +511,27 @@ Line raycastingVertical(float angle, View *v)
 
     return ray;
 }
+
+
+Line raycasting(float angle, View *v){
+
+#if defined(ONELINE)
+    SDL_SetRenderDrawColor(v->renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);
+#endif // defined
+    Line rayh = raycastingHorizontal(angle, v);
+#if defined(ONELINE)
+    SDL_SetRenderDrawColor(v->renderer, 255, 0, 255, SDL_ALPHA_OPAQUE);
+#endif // defined
+    Line rayv = raycastingVertical(angle, v);
+
+    if( sqrtf(abs(rayh.x2 - rayh.x)) + sqrtf(abs(rayh.y2 - rayh.y)) > sqrtf(abs(rayv.x2 - rayv.x)) + sqrtf(abs(rayv.y2 - rayv.y)) ){
+        return rayv;
+    } else {
+        return rayh;
+    }
+
+}
+
 
 void CenterToCellMap(View *v)
 {
@@ -567,6 +623,22 @@ void drawMap(View* v, SDL_Renderer* renderer)
     }
 }
 
+void rayCalculate(View *v){
+
+    float min_fov = v->angle -((v->angle_fov /2) * M_PI / 180);
+    float max_fov = v->angle +((v->angle_fov /2) * M_PI / 180);
+
+    float step_fov = v->angle_fov / v->ray_count;
+
+    float ray_angle = min_fov;
+
+    for(int i = 0; i < v->ray_count; i++){
+        v->rays[i] = raycasting(ray_angle, v);
+        ray_angle += step_fov;
+    }
+
+}
+
 void drawView(View* v, SDL_Renderer* renderer)
 {
     float len = 10.0f;
@@ -599,7 +671,7 @@ void drawView(View* v, SDL_Renderer* renderer)
 #endif
 
     SDL_SetRenderDrawColor(renderer, 255, 255, 0, SDL_ALPHA_OPAQUE);
-
+/*
     len = 30.0f;
 
     y = sinf( min_fov ) * len;
@@ -609,9 +681,13 @@ void drawView(View* v, SDL_Renderer* renderer)
     y = sinf( max_fov ) * len;
     x = cosf( max_fov ) * len;
     SDL_RenderDrawLine(renderer, (int)v->x, (int)v->y, (int)(v->x + x), (int)(v->y + y));
+*/
 
 }
 
+void drawScene(View* v, SDL_Renderer* renderer)
+{
+}
 
 //draw one quadrant arc, and mirror the other 4 quadrants
 void sdl_ellipse(SDL_Renderer* r, int x0, int y0, int radiusX, int radiusY)
