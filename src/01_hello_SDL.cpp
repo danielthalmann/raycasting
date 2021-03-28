@@ -127,7 +127,7 @@ int main(int argc, char** argv)
         v.renderer = renderer;
 
         // initialise le tableau des rayons
-        v.rays = (struct Line*)malloc(1 * sizeof(WIN_W));
+        v.rays = (struct Line*)malloc(WIN_W * sizeof(Line));
         v.ray_count = WIN_W;
 
         CenterToCellMap(&v);
@@ -623,12 +623,15 @@ void drawMap(View* v, SDL_Renderer* renderer)
     }
 }
 
+//
+// effectue un calcule de rayon pour chaque ligne
+//
 void rayCalculate(View *v){
 
     float min_fov = v->angle -((v->angle_fov /2) * M_PI / 180);
     float max_fov = v->angle +((v->angle_fov /2) * M_PI / 180);
 
-    float step_fov = v->angle_fov / v->ray_count;
+    float step_fov = (max_fov - min_fov) / v->ray_count;
 
     float ray_angle = min_fov;
 
@@ -639,6 +642,9 @@ void rayCalculate(View *v){
 
 }
 
+//
+// Dessine la mini map
+//
 void drawView(View* v, SDL_Renderer* renderer)
 {
     float len = 10.0f;
@@ -649,7 +655,7 @@ void drawView(View* v, SDL_Renderer* renderer)
     float min_fov = v->angle -((v->angle_fov /2) * M_PI / 180);
     float max_fov = v->angle +((v->angle_fov /2) * M_PI / 180);
 
-    float step_fov = (max_fov - min_fov) / WIN_W;
+    float step_fov = (max_fov - min_fov) / v->ray_count;
 
     SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);
     SDL_RenderDrawLine(renderer, (int)v->x, (int)v->y, (int)(v->x + x), (int)(v->y + y));
@@ -662,12 +668,21 @@ void drawView(View* v, SDL_Renderer* renderer)
     SDL_RenderDrawLine(renderer, ray.x, ray.y, ray.x2, ray.y2);
 
 #else
-    for(int i = 0; i < WIN_W; i++){
+
+    for(int i = 0; i < v->ray_count; i++){
+
+        struct Line ray = v->rays[i];
+        SDL_RenderDrawLine(renderer, ray.x, ray.y, ray.x2, ray.y2);
+
+    }
+    /*
+    for(int i = 0; i < v->ray_count; i++){
 
         Line ray = raycasting(ray_angle, v);
         SDL_RenderDrawLine(renderer, ray.x, ray.y, ray.x2, ray.y2);
         ray_angle += step_fov;
     }
+    */
 #endif
 
     SDL_SetRenderDrawColor(renderer, 255, 255, 0, SDL_ALPHA_OPAQUE);
@@ -685,8 +700,27 @@ void drawView(View* v, SDL_Renderer* renderer)
 
 }
 
+/**
+ * dessine le monde en 3d
+ *
+ */
 void drawScene(View* v, SDL_Renderer* renderer)
 {
+
+    for(int i = 0; i < v->ray_count; i++){
+
+        struct Line ray = v->rays[i];
+        float p = sqrtf((ray.y2 - ray.y) * (ray.y2 - ray.y) + (ray.x2 - ray.x) * (ray.x2 - ray.x));
+
+        p = ((320.0f - p) / 320.0f);
+        int h = (int)(p * (WIN_H / 2));
+
+        SDL_SetRenderDrawColor(renderer, 0, (p * 200), 0, SDL_ALPHA_OPAQUE);
+
+        SDL_RenderDrawLine(renderer, i, (int)((WIN_H / 2) - h), i, (int)((WIN_H / 2) + h));
+
+    }
+
 }
 
 //draw one quadrant arc, and mirror the other 4 quadrants
