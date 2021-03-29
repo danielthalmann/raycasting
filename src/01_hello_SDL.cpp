@@ -280,7 +280,8 @@ View createViewer()
     v.x = 40;
     v.y = 40;
     v.angle = M_PI * 2;
-    v.angle_fov = 60.0f;
+//    v.angle_fov = 60.0f;
+    v.angle_fov = 45.0f;
     v.speed = 30.0f;
     v.speed_angle = 4.0f;
 
@@ -313,11 +314,11 @@ Line raycastingHorizontal(float angle, View *v)
     // distance of field
     int hit = 0;
 
-    float tierPi = M_PI + M_PI / 2;
-    float troisTierPi = M_PI / 2;
+    float unDemiPi = M_PI + M_PI / 2;
+    float demiPi = M_PI / 2;
 
     //if(angle < M_PI){
-    if( angle > tierPi || angle < troisTierPi ){
+    if( angle > unDemiPi || angle < demiPi ){
 
         ry = (QUAD_SIZE - (v->x - (v->map_x * QUAD_SIZE))) * tanf( angle );
 
@@ -338,7 +339,7 @@ Line raycastingHorizontal(float angle, View *v)
     }
 
     //if(angle == M_PI || angle == 0.0){
-    if( angle < tierPi && angle > troisTierPi ){
+    if( angle < unDemiPi && angle > demiPi ){
 
         ry = - (v->x - ((v->map_x) * QUAD_SIZE)) * tanf( angle );
 
@@ -359,7 +360,7 @@ Line raycastingHorizontal(float angle, View *v)
 
     }
 
-    if( angle == tierPi || angle == troisTierPi ){
+    if( angle == unDemiPi || angle == demiPi ){
         map_x = 0;
         map_y = 0;
         hit = 1;
@@ -386,7 +387,7 @@ Line raycastingHorizontal(float angle, View *v)
                 map_x = ray.x2 / QUAD_SIZE;
                 map_y = ray.y2 / QUAD_SIZE;
 
-                if( angle < tierPi && angle > troisTierPi ){
+                if( angle < unDemiPi && angle > demiPi ){
                     map_x--;
                 }
 
@@ -707,13 +708,20 @@ void drawView(View* v, SDL_Renderer* renderer)
 void drawScene(View* v, SDL_Renderer* renderer)
 {
 
+    float angle_pi = (v->angle_fov * M_PI / 180);
+    float step_fov = angle_pi / v->ray_count;
+    float a = -(angle_pi / 2);
+
     for(int i = 0; i < v->ray_count; i++){
+
+        float cos_a = cosf(a);
+        a += step_fov;
 
         struct Line ray = v->rays[i];
         float p = sqrtf((ray.y2 - ray.y) * (ray.y2 - ray.y) + (ray.x2 - ray.x) * (ray.x2 - ray.x));
 
         p = ((320.0f - p) / 320.0f);
-        int h = (int)(p * (WIN_H / 2));
+        int h = (int)(p * (WIN_H / 2)* ( cos_a));
 
         SDL_SetRenderDrawColor(renderer, 0, (p * 200), 0, SDL_ALPHA_OPAQUE);
 
