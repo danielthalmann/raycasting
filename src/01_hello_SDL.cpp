@@ -281,7 +281,7 @@ View createViewer()
     v.y = 40;
     v.angle = M_PI * 2;
 //    v.angle_fov = 60.0f;
-    v.angle_fov = 45.0f;
+    v.angle_fov = 60.0f;
     v.speed = 30.0f;
     v.speed_angle = 4.0f;
 
@@ -709,19 +709,30 @@ void drawScene(View* v, SDL_Renderer* renderer)
 {
 
     float angle_pi = (v->angle_fov * M_PI / 180);
-    float step_fov = angle_pi / v->ray_count;
-    float a = -(angle_pi / 2);
+    float demi = angle_pi / 2;
+    float angle_step = angle_pi / v->ray_count;
+    float cos_a = -demi;
+    float correction;
+
 
     for(int i = 0; i < v->ray_count; i++){
 
-        float cos_a = cosf(a);
-        a += step_fov;
+        if(cos_a < 0){
+            correction = cosf(-cos_a);
+        } else {
+            correction = cosf(cos_a);
+        }
+        cos_a += angle_step;
+
+        //printf("%f, %f, %f\n", correction, (cos_a), i);
 
         struct Line ray = v->rays[i];
         float p = sqrtf((ray.y2 - ray.y) * (ray.y2 - ray.y) + (ray.x2 - ray.x) * (ray.x2 - ray.x));
 
+        p = p * correction;
+
         p = ((320.0f - p) / 320.0f);
-        int h = (int)(p * (WIN_H / 2)* ( cos_a));
+        int h = (int)(p * (float)(WIN_H / 2.0));
 
         SDL_SetRenderDrawColor(renderer, 0, (p * 200), 0, SDL_ALPHA_OPAQUE);
 
@@ -779,3 +790,4 @@ void sdl_ellipse(SDL_Renderer* r, int x0, int y0, int radiusX, int radiusY)
         SDL_RenderDrawLine(r, x0 + x, y0 + y,    x0 + x1, y0 + y1 );//quadrant BR
     }
 }
+
