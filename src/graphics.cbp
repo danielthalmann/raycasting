@@ -41,8 +41,18 @@
 		<ExtraCommands>
 			<Add after='cmd /c xcopy &quot;.\data&quot; &quot;$(TARGET_OUTPUT_DIR)data\&quot; /y' />
 		</ExtraCommands>
-		<Unit filename="01_hello_SDL.cpp" />
 		<Unit filename="data/map.txt" />
+		<Unit filename="graphics.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="map.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="map.h" />
+		<Unit filename="raycasting.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="view.h" />
 		<Extensions />
 	</Project>
 </CodeBlocks_project_file>

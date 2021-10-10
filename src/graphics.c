@@ -1,7 +1,8 @@
-#include <iostream>
 #include <SDL2/SDL.h>
 #include <stdio.h>
 #include <math.h>
+#include "view.h"
+#include "map.h"
 
 const int ARRAY_LEN = 10;
 const int QUAD_SIZE = 32;
@@ -13,48 +14,8 @@ const int QUAD_SIZE = 32;
 
 // #define ONELINE
 
-struct Movement {
-    int Left;
-    int Right;
-    float Up;
-    float Down;
-};
-
-struct Line {
-    float x;
-    float y;
-    float x2;
-    float y2;
-};
-
-struct View {
-	// position on window
-    float x;
-    float y;
-
-    // map structure
-    int** map;
-    // position on map
-    int map_x;
-    int map_y;
-    // angle on position
-    float angle;
-    // field of view
-    float angle_fov;
-    float speed;
-    float speed_angle;
-    int deltaTick;
-
-    struct Line* rays;
-    int ray_count;
-
-    SDL_Renderer* renderer;
-
-};
-
-
 View createViewer();
-Line raycasting(float angle, View &v);
+Line raycasting(float angle, View *v);
 void localizeOnMap(View *v);
 void CenterToCellMap(View *v);
 void rotateLeftView(View *v);
@@ -69,6 +30,7 @@ void sdl_ellipse(SDL_Renderer* r, int x0, int y0, int radiusX, int radiusY);
 
 
 // static_assert( sizeof(int) == 4, "16 bits platform required" );
+
 
 int main(int argc, char** argv)
 {
@@ -86,22 +48,7 @@ int main(int argc, char** argv)
     SDL_Window* pWindow = NULL;
     SDL_Renderer* renderer = NULL;
 
-    FILE* f = fopen("data\\map.txt", "r");
-
-    int** map = (int**) malloc(ARRAY_LEN * sizeof(int*));
-
-    for (int y=0; y < ARRAY_LEN; ++y ) {
-        map[y] = (int*)malloc(ARRAY_LEN * sizeof(int));
-        for (int x=0; x < ARRAY_LEN; ++x ) {
-            int value = 0;
-            fscanf(f, "%d", &value);
-            map[y][x] = value;
-        }
-    }
-
-    fclose( f );
-
-
+    int** map = open_map("data\\map.txt", ARRAY_LEN);
     /*
     pWindow = SDL_CreateWindow("Ma première application SDL2",SDL_WINDOWPOS_UNDEFINED,
                                                               SDL_WINDOWPOS_UNDEFINED,
@@ -127,11 +74,11 @@ int main(int argc, char** argv)
         v.renderer = renderer;
 
         // initialise le tableau des rayons
-        v.rays = (struct Line*)malloc(WIN_W * sizeof(Line));
+        v.rays = (Line*)malloc(WIN_W * sizeof(Line));
         v.ray_count = WIN_W;
 
         CenterToCellMap(&v);
-        Movement m = Movement();
+        Movement m;
         m.Up = 0;
         m.Down = 0;
         m.Left = 0;
@@ -276,7 +223,7 @@ int main(int argc, char** argv)
 
 View createViewer()
 {
-    struct View v;
+    View v;
     v.x = 40;
     v.y = 40;
     v.angle = M_PI * 2;
@@ -301,7 +248,7 @@ Line raycastingHorizontal(float angle, View *v)
     }
     angle = fmod(angle, (double)(2 * M_PI));
 
-    struct Line ray;
+    Line ray;
 
     ray.x = v->x;
     ray.y = v->y;
@@ -413,7 +360,7 @@ Line raycastingVertical(float angle, View *v)
     }
     angle = fmod(angle, (double)(2 * M_PI));
 
-    struct Line ray;
+    Line ray;
 
     ray.x = v->x;
     ray.y = v->y;
@@ -536,14 +483,14 @@ Line raycasting(float angle, View *v){
 
 void CenterToCellMap(View *v)
 {
-	v->x = int(v->map_x * QUAD_SIZE) + (QUAD_SIZE / 2);
-	v->y = int(v->map_y * QUAD_SIZE) + (QUAD_SIZE / 2);
+	v->x = (int)(v->map_x * QUAD_SIZE) + (QUAD_SIZE / 2);
+	v->y = (int)(v->map_y * QUAD_SIZE) + (QUAD_SIZE / 2);
 }
 
 void localizeOnMap(View *v)
 {
-	v->map_x = int(v->x / QUAD_SIZE);
-	v->map_y = int(v->y / QUAD_SIZE);
+	v->map_x = (int)(v->x / QUAD_SIZE);
+	v->map_y = (int)(v->y / QUAD_SIZE);
 }
 
 void rotateLeftView(View *v)
@@ -672,7 +619,7 @@ void drawView(View* v, SDL_Renderer* renderer)
 
     for(int i = 0; i < v->ray_count; i++){
 
-        struct Line ray = v->rays[i];
+        Line ray = v->rays[i];
         SDL_RenderDrawLine(renderer, ray.x, ray.y, ray.x2, ray.y2);
 
     }
@@ -726,7 +673,7 @@ void drawScene(View* v, SDL_Renderer* renderer)
 
         //printf("%f, %f, %f\n", correction, (cos_a), i);
 
-        struct Line ray = v->rays[i];
+        Line ray = v->rays[i];
         float p = sqrtf((ray.y2 - ray.y) * (ray.y2 - ray.y) + (ray.x2 - ray.x) * (ray.x2 - ray.x));
 
         p = p * correction;
