@@ -49,21 +49,9 @@ int main(int argc, char** argv)
     SDL_Renderer* renderer = NULL;
 
     int** map = open_map("data\\map.txt", ARRAY_LEN);
-    /*
-    pWindow = SDL_CreateWindow("Ma première application SDL2",SDL_WINDOWPOS_UNDEFINED,
-                                                              SDL_WINDOWPOS_UNDEFINED,
-                                                              640,
-                                                              480,
-                                                              SDL_WINDOW_SHOWN);
-    */
 
-    for (int y=0; y < ARRAY_LEN; ++y ) {
-        printf("\n");
-        for (int x=0; x < ARRAY_LEN; ++x ) {
-            printf("%d", map[y][x]);
-        }
-    }
-
+    print_map(map, ARRAY_LEN);
+    
     if( SDL_CreateWindowAndRenderer(WIN_W, WIN_H, 0, &pWindow, &renderer) == 0 )
     {
         //
@@ -311,7 +299,6 @@ Line raycastingHorizontal(float angle, View *v)
         map_x = 0;
         map_y = 0;
         hit = 1;
-
     }
 
     while (!hit){
